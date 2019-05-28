@@ -1,4 +1,4 @@
-package com.calculator.demo.model;
+package com.calculator.demo.modelo;
 
 import java.util.Date;
 
@@ -20,8 +20,20 @@ public class Session {
 	
 	private String session;
 	
-	private String user;
-	
+	private String username;
+
+	public Session(long id, Date creationDate, String session, String username) {
+		super();
+		this.id = id;
+		this.creationDate = creationDate;
+		this.session = session;
+		this.username = username;
+	}
+
+	public Session() {
+		super();
+	}
+
 	public long getId() {
 		return id;
 	}
@@ -45,13 +57,13 @@ public class Session {
 	public void setSession(String session) {
 		this.session = session;
 	}
-	
-	public String getUser() {
-		return user;
-	}
-	
-	public void setUser(String user) {
-		this.user = user;
+
+	public String getUsername() {
+		return username;
 	}
 
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	
 }

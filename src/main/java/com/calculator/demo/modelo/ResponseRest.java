@@ -1,4 +1,4 @@
-package com.calculator.demo.model;
+package com.calculator.demo.modelo;
 
 import java.util.Date;
 
@@ -11,6 +11,18 @@ public class ResponseRest {
 	private Header header;
 	
 	private Object body;
+
+	public ResponseRest(Date creationDate, Session session, Header header, Object body) {
+		super();
+		this.creationDate = creationDate;
+		this.session = session;
+		this.header = header;
+		this.body = body;
+	}
+
+	public ResponseRest() {
+		super();
+	}
 
 	public Date getCreationDate() {
 		return creationDate;
