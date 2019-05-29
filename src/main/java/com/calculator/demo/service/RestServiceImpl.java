@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.calculator.demo.exception.GeneralException;
 import com.calculator.demo.modelo.Audit;
 import com.calculator.demo.modelo.Operation;
 import com.calculator.demo.modelo.ResponseRest;
@@ -24,6 +26,8 @@ import io.jsonwebtoken.SignatureAlgorithm;
 @Service("restService")
 @Transactional
 public class RestServiceImpl implements RestService{
+
+	private static final Logger logger = LoggerFactory.getLogger(RestServiceImpl.class);
 	
 	@Autowired
 	private SessionRepository sessionRepository;
@@ -33,8 +37,17 @@ public class RestServiceImpl implements RestService{
 	
 	private final String secretKey = "aaaZZZ";
 
-	public ResponseRest getSession(String user){
+	/**
+     * Implementación de método para la obtencion de una session por usuario
+     * 
+     * @param user
+     *            usuario a loguear
+     * @return ResponseRest
+     * 			  respuesta del objeto rest 
+     */
+	public ResponseRest getSession(String user) throws GeneralException{
 		ResponseRest response = new ResponseRest();
+		
 		String token = getJWTToken(user);
 		Session session = new Session();
 		session.setCreationDate(new Date());
@@ -42,47 +55,63 @@ public class RestServiceImpl implements RestService{
 		session.setUsername(user);
 		response.setSession(session);
 		sessionRepository.save(session);
+		
 		return response;
 	}
-	
-	public ResponseRest putOperando(Operation operation){
-		System.out.println(operation.getSession());
+	/**
+     * Método que implementa el grabado de un operando numérico, valida la session que este activa y almacena el valor
+     * 
+     * @param operation
+     *            objeto Operation con el número a operar
+     * @return ResponseRest
+     * 			  respuesta del objeto rest 
+     */
+	public ResponseRest putOperando(Operation operation) throws GeneralException{
+		logger.debug("Session recibida "+operation.getSession());
 		ResponseRest response = new ResponseRest();
+		
 		Claims claims = validateToken(operation.getSession());
-//		System.out.println(claims.toString());
 		if (claims.get("sub") != null) {
-//			Token exitoso
-			System.out.println("correcto");
+			logger.debug("Session validada");
 			Session session = sessionRepository.findBySession(operation.getSession().getSession());
-			System.out.println(session.toString());
+			logger.debug(" session "+session.toString());
 			operation.setCreationDate(new Date());
 			operation.setSession(session);
-			System.out.println(operation.toString());
+			logger.debug(operation.toString());
+			response.setSession(session);
 			response.setBody((Operation)operationRepository.save(operation));
 		} else {
-			System.out.println("Error");
-//			SecurityContextHolder.clearContext();
+			logger.error("Error");
+			throw new GeneralException("token invalido");
 		}
 		return response;
 	}
 	
-	public ResponseRest putOperador(Operation operation){
-		System.out.println(operation.getSession());
+	/**
+     * Método que implementa el cálculo de una operación para los datos de una sesion, valida que la sessión exista
+     * busca los operandos que han sido almacenados y realiza validaciones de cantidad de datos y tipos de operador
+     * finalmente realiza el calculo y retorna la respuesta
+     * 
+     * @param Operation
+     *            objeto Operation con el simbolo de la operacion a realizar
+     * @return ResponseRest
+     * 			  respuesta del objeto rest 
+     */
+	public ResponseRest putOperador(Operation operation) throws GeneralException{
+		logger.debug("Session recibida "+operation.getSession());
 		ResponseRest response = new ResponseRest();
 		Claims claims = validateToken(operation.getSession());
-//		System.out.println(claims.toString());
 		if (claims.get("sub") != null) {
-//			Token exitoso
-			System.out.println("correcto");
+			logger.debug("Session valida");
 			Session session = sessionRepository.findBySession(operation.getSession().getSession());
-			System.out.println(session.toString());
+			logger.debug(" session "+session.toString());
 			operation.setCreationDate(new Date());
 			operation.setSession(session);
-			System.out.println(operation.toString());
+			logger.debug(operation.toString());
 			
 			BigDecimal resultado = new BigDecimal(0);
 			
-			List<Operation> operations = operationRepository.findAllBySessionAndOperador(session, null);
+			List<Operation> operations = operationRepository.findAllBySession(session);
 			if(!operations.isEmpty() && operations.size() > 1){
 				response.setBody(operationRepository.save(operation));
 				resultado = operations.get(0).getOperando();
@@ -98,32 +127,54 @@ public class RestServiceImpl implements RestService{
 						if(op.getOperando().compareTo(new BigDecimal(0)) != 0){
 							resultado = resultado.divide(op.getOperando());
 						}else{
-							System.out.println("no es posible dividir entre cero");
+							logger.info("no es posible dividir entre cero");
+							throw new GeneralException("no es posible dividir entre cero");
 						}
 					}else if(operation.getOperador().compareTo("^") == 0){
 						resultado = resultado.pow(op.getOperando().intValue());
 					}else{
-						System.out.println("operacion no existente");
+						logger.info("operacion no existente");
+						throw new GeneralException("tipo de operacion no existente");
 					}
 				}
+				operation.setResultado(resultado);
 				operation.setOperando(resultado);
-				operation.setOperador(null);
-				response.setBody(operationRepository.save(operation));
+				operation = operationRepository.save(operation);
+				response.setSession(session);
+				response.setBody(operation);
 			}else{
-				System.out.println("debe haber minimo dos operandos para operar");
+				logger.info("debe haber minimo dos operandos para operar");
+				throw new GeneralException("debe haber minimo dos operandos para operar");
 			}
 		} else {
-			System.out.println("Error token no valido");
-//			SecurityContextHolder.clearContext();
+			logger.error("Error token no valido");
+			throw new GeneralException("token invalido");
 		}
 		return response;
 	}
 	
-	public Audit getAudit (Session session){
+	/**
+     * Método que implementa la obtencion de auditoria y traza
+     * 
+     * @param session
+     *            objeto de session a auditar
+     * @return ResponseRest
+     * 			  respuesta del objeto rest de auditoria 
+     */
+	public Audit getAudit (Session session) throws GeneralException{
 		return null;
 	}
 	
-	private String getJWTToken(String username) {
+	/**
+     * Método para implementar la obtencion y generación de un token mediante una clave privada
+     * y durante 10 minutos
+     * 
+     * @param username
+     *            recibe nombre de usuario
+     * @return String 
+     * 			  respuesta del token generado 
+     */
+	public String getJWTToken(String username) throws GeneralException{
 		String token = Jwts
 				.builder()
 				.setSubject(username)
@@ -133,7 +184,15 @@ public class RestServiceImpl implements RestService{
 		return token;
 	}
 	
-	private Claims validateToken(Session session) {
+	/**
+     * Método que valida un token generado mediante una clave privada y comprueba su vigencia y validez
+     * 
+     * @param session
+     *            recibe el objeto session con el token
+     * @return Claims
+     * 			  respuesta del objeto con la informacion del token 
+     */
+	public Claims validateToken(Session session) throws GeneralException{
 		String jwtToken = session.getSession();
 		return Jwts.parser().setSigningKey(secretKey.getBytes()).parseClaimsJws(jwtToken).getBody();
 	}
