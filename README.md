@@ -104,6 +104,14 @@ Content type : JSON
     }
 }
 ```
+###Operadores permitidos 
+| Operador      | Descripción |
+| --------- | -----:|
+| +  | suma  | 
+| -  | resta | 
+| &ast;   | multiplicación  | 
+| /  | división | 
+| &Hat;  | potencia | 
 
 ###Mensajes generados 
 | Mensaje      | Código |
