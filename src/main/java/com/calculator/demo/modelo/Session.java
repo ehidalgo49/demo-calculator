@@ -66,4 +66,8 @@ public class Session {
 		this.username = username;
 	}
 	
+	@Override
+	public String toString() {
+		return "Session [ id="+this.id+" creationDate="+this.creationDate+" session="+this.session+" username="+this.username+" ]";
+	}
 }

@@ -3,6 +3,7 @@ package com.calculator.demo.modelo;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -24,13 +25,16 @@ public class Operation {
 	@ManyToOne(fetch = FetchType.LAZY)
 	private Session session;
 	
+	@Column(nullable=true)
 	private BigDecimal operando;
 	
-	private BigDecimal operador;
+	@Column(nullable=true)
+	private String operador;
 	
+	@Column(nullable=true)
 	private BigDecimal resultado;
 	
-	public Operation(long id, Date creationDate, Session session, BigDecimal operando, BigDecimal operador,
+	public Operation(long id, Date creationDate, Session session, BigDecimal operando, String operador,
 			BigDecimal resultado) {
 		super();
 		this.id = id;
@@ -77,12 +81,12 @@ public class Operation {
 		this.operando = operando;
 	}
 
-	public BigDecimal getOperador() {
-		return operador;
+	public String getOperador() {
+		return operador != null ? operador.trim() : operador;
 	}
 
-	public void setOperador(BigDecimal operador) {
-		this.operador = operador;
+	public void setOperador(String operador) {
+		this.operador = operador != null ? operador.trim() : operador;
 	}
 
 	public BigDecimal getResultado() {
@@ -93,4 +97,9 @@ public class Operation {
 		this.resultado = resultado;
 	}
 
+	@Override
+	public String toString() {
+		return "Operation [ id="+this.id+" creationDate="+this.creationDate+" operando="+this.operando+" operador="+this.operador
+				+" resultado="+this.resultado+" session="+ this.session.toString() +" ]";
+	}
 }
